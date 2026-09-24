@@ -17,10 +17,7 @@ subdir<- "/Studier/Incidence_of_IE/Data/RData/"
 # load(str_c(directory, subdir_rdata, file)) Use if/when weights are needed
 load(str_c(directory, subdir, "ie_inc_df.RData"))
 
-ie_inc_df <- ie_inc_df %>%
-  mutate(sex = factor(sex_binary, levels = c(0, 1), labels = c("Male", "Female")))
-
-ie_inc_df <- ie_inc_df %>%
+incidence_sex_yr <- ie_inc_df %>%
   group_by(year, sex) %>%
   summarise(
     cases = sum(cases),
@@ -29,7 +26,7 @@ ie_inc_df <- ie_inc_df %>%
     .groups = "drop"
   )
 
-ie_inc_df <- ie_inc_df %>%
+incidence_sex_yr <- incidence_sex_yr %>%
   mutate(
     lower_ci = qchisq(0.025, 2 * cases) /
       (2 * population) * 100000,
@@ -37,45 +34,87 @@ ie_inc_df <- ie_inc_df %>%
       (2 * population) * 100000
   )
 
+# Creating poisson model
+trend_model <- glm(cases ~ year, offset = log(population), family = poisson(), data = incidence_sex_yr)
+
+# Checking for overdispersion (answer = 40.18682)
+deviance(trend_model) / df.residual(trend_model)
+
+# Calculating the Pearson dispersion
+sum(residuals(trend_model, type = "pearson")^2) /
+  df.residual(trend_model)
+
+m1 <- glm(
+  cases ~ year,
+  offset = log(population),
+  family = quasipoisson,
+  data = incidence_sex_yr
+)
+
+m_spline <- glm(
+  cases ~ ns(year, df = 3),
+  offset = log(population),
+  family = quasipoisson,
+  data = incidence_sex_yr
+)
+
+# anova test gives non-significant p-value (P = appr. 0.64), therefore linear model is just as good as splline model.
+anova(m1, m_spline, test = "F")
+
+### Fitting linear quasi-Poisson model
+
+m_sex <- glm(
+  cases ~ year * sex + offset(log(population)),
+  family = quasipoisson,
+  data = incidence_sex_yr
+)
+
+incidence_sex_yr$pred_cases <- predict(
+  m_sex,
+  type = "response"
+)
+
+incidence_sex_yr <- incidence_sex_yr %>%
+  mutate(
+    pred_incidence = pred_cases / population * 100000
+  )
 
 ### Plotting incidence among males and females
-ggplot(
-  ie_inc_df,
-  aes(
-    x = year,
-    y = incidence,
-    color = sex)
-) +
-  geom_line(linewidth = 1) +
-  geom_point(size = 2) +
-  geom_ribbon(
-    aes(
-      ymin = lower_ci,
-      ymax = upper_ci,
-      fill = sex
-    ),
-    alpha = 0.15,
-    color = NA
-  ) +
-  scale_color_manual(
-    values = c(
-      "Female" = "#E69F00",
-      "Male" = "#0072B2"
-    )
-  ) +
-  scale_fill_manual(
-    values = c(
-      "Female" = "#E69F00",
-      "Male" = "#0072B2"
-    )
-  ) +
+sex_inc_fig <- ggplot(incidence_sex_yr,
+       aes(x = year,
+           color = sex)) +
+
+  geom_point(aes(y = incidence),
+             size = 2) +
+
+  geom_line(aes(y = pred_incidence),
+            linewidth = 1) +
+
+  scale_color_manual(values = c(
+    "Male" = "#0072B2",
+    "Female" = "#D55E00"
+  )) +
+
   labs(
-    x = "Year",
+    x = NULL,
     y = "Incidence per 100,000 person-years",
-    color = "Sex",
-    fill = "Sex"
+    color = NULL
   ) +
-  theme_classic(base_size = 16)
+
+  theme_classic(base_size = 16) +
+
+  theme(
+    legend.position = "top"
+  )
+
+sex_inc_fig
+
+### SAVING smoothly fitted curve
+subdir3 <- "/Studier/Incidence_of_IE/Fig/"
+pdf(str_c(directory, subdir3, "sex_inc_fig.pdf"), width = 15, height = 10, onefile = F)
+sex_inc_fig
+dev.off()
+
 
 ### Calculating incidence rate ratio Male/Female by year
 incidence_ratio <- ie_inc_df %>%
@@ -99,7 +138,7 @@ incidence_ratio <- ie_inc_df %>%
   )
 
 ### Plotting Male/Female incidence rate ratio
-ggplot(
+sex_irr_fig <- ggplot(
   incidence_ratio,
   aes(year, irr)
 ) +
@@ -113,3 +152,11 @@ ggplot(
     y = "Male/Female incidence rate ratio"
   ) +
   theme_classic(base_size = 16)
+
+sex_irr_fig
+
+### SAVING smoothly fitted curve
+subdir3 <- "/Studier/Incidence_of_IE/Fig/"
+pdf(str_c(directory, subdir3, "sex_irr_fig.pdf"), width = 15, height = 10, onefile = F)
+sex_irr_fig
+dev.off()

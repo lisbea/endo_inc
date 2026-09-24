@@ -87,6 +87,10 @@ ie_inc_df <- pop_census_long %>%
 
 ie_inc_df <- ie_inc_df %>% filter(year >= 1997, year <= 2023)
 
+ie_inc_df <- ie_inc_df %>%
+  mutate(sex = factor(sex_binary, levels = c(0, 1), labels = c("Male", "Female"))) %>%
+  select("age", "year", "population", "cases", "incidence", "sex")
+
 #Saving combined incidence dataframe
 save(ie_inc_df, file = "~/Library/CloudStorage/OneDrive-KarolinskaInstitutet/SHARED_OneDrive/Natalie Glaser's files - ENDO_CARE/Studier/Incidence_of_IE/Data/RData/ie_inc_df.RData")
 

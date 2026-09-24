@@ -35,7 +35,7 @@ ie_inc_df <- ie_inc_df %>%
 
 # Creating standardization groups
 incidence_grouped <- ie_inc_df %>%
-  group_by(year, age_group, sex_binary) %>%
+  group_by(year, age_group, sex) %>%
   summarise(
     cases = sum(cases),
     population = sum(population),
@@ -109,12 +109,12 @@ ggplot(incidence_eur_std, aes(x = year, y = std_incidence)) +
 # Standardizing to the 2010 SWEDISH population only (sensitivity analysis)
 swe_ref_pop <- ie_inc_df %>%
   filter(year == 2010) %>%
-  group_by(age_group, sex_binary) %>%
+  group_by(age_group, sex) %>%
   summarise(weight = sum(population), .groups = "drop")
 
 
 incidence_std_swe <- incidence_grouped %>%
-  left_join(swe_ref_pop, by = c("age_group", "sex_binary")) %>%
+  left_join(swe_ref_pop, by = c("age_group", "sex")) %>%
   mutate(rate = cases / population)
 
 

@@ -1,0 +1,213 @@
+---
+title: "Incidence Paper Results"
+author: "Lisa Bearpark"
+format: docx
+editor: source
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+### Loading the correct data and packages
+```{r}
+library(tidyverse)
+library(survival)
+library(dplyr)
+library(broom)
+library(naniar)
+library(simputation)
+library(car)
+library(readr)
+library(stringr)
+library(ggplot2)
+library(splines)
+
+# Set base directory
+directory <- system("find ~ -name \"*- ENDO_CARE*\" -type d -depth 5 -maxdepth 5 2>/dev/null | grep CARE", intern = T)
+subdir1 <- "/Data/RData/"
+subdir2 <- "/Studier/Incidence_of_IE/Data/RData/"
+
+# load(str_c(directory, subdir_rdata, file)) Use if/when weights are needed
+load(str_c(directory, subdir1, "endocarditis_joined_total.RData"))
+load(str_c(directory, subdir2, "ie_inc_df.RData"))
+```
+
+### Missing data
+```{r}
+#| echo: false
+
+endocarditis_joined_total %>% 
+  miss_var_summary() %>% 
+  filter(pct_miss > 0) %>% 
+  print(n = Inf)
+
+ie_inc_df %>% 
+  miss_var_summary() %>% 
+  filter(pct_miss > 0) %>% 
+  print(n = Inf)
+```
+
+
+# Study population
+## Total number of IE cases
+```{r}
+nrow(endocarditis_joined_total)
+```
+
+## Number of patients by sex
+```{r}
+endocarditis_joined_total %>% 
+  mutate(sex = factor(sex, levels = c(0, 1), labels = c("Male", "Female"))) %>% 
+  count(sex) %>% 
+  mutate(percent = round(100*n / sum(n), 1))
+
+endocarditis_joined_total %>% 
+  mutate(sex = factor(sex, levels = c(0, 1), labels = c("Male", "Female"))) %>% 
+  filter(year_of_diagnosis == "1997" | year_of_diagnosis == "2023") %>% 
+  group_by(year_of_diagnosis) %>% 
+  count(sex) %>% 
+  mutate(percent = round(100*n / sum(n), 1))
+
+```
+
+## Age distribution, summary statistics
+```{r}
+endocarditis_joined_total %>%
+summarise(
+n = n(),
+min = min(age_at_diagnosis, na.rm = TRUE),
+q1 = quantile(age_at_diagnosis, 0.25, na.rm = TRUE),
+median = median(age_at_diagnosis, na.rm = TRUE),
+q3 = quantile(age_at_diagnosis, 0.75, na.rm = TRUE),
+max = max(age_at_diagnosis, na.rm = TRUE),
+mean = mean(age_at_diagnosis, na.rm = TRUE),
+sd = sd(age_at_diagnosis, na.rm = TRUE)
+)
+```
+
+## Age distribution, age pyramid by sex
+```{r}
+
+endocarditis_joined_total <- endocarditis_joined_total %>%
+mutate(
+age_group = case_when(
+age_at_diagnosis < 60 ~ "<60",
+age_at_diagnosis >= 60 & age_at_diagnosis < 70 ~ "60-69",
+age_at_diagnosis >= 70 & age_at_diagnosis < 80 ~ "70-79",
+age_at_diagnosis >= 80 ~ "80+"
+),
+age_group = factor(
+age_group,
+levels = c("<60", "60-69", "70-79", "80+")
+)
+)
+
+endocarditis_joined_total <- endocarditis_joined_total %>%
+mutate(
+sex = factor(
+sex,
+levels = c(0, 1),
+labels = c("Male", "Female")
+)
+)
+
+age_sex_pyramid_df <- endocarditis_joined_total %>%
+  count(sex, age_group) %>%
+  group_by(sex) %>%
+  mutate(pct = 100 * n / sum(n)) %>%
+  ungroup() %>%
+  mutate(pct = ifelse(sex == "Male", -pct, pct)
+)
+
+
+ggplot(age_sex_pyramid_df,
+aes(x = age_group,
+y = n,
+fill = sex)) +
+geom_col(position = position_stack(reverse = TRUE)) +
+coord_flip() +
+scale_fill_manual(values = c(
+"Male" = "#0072B2", 
+"Female" = "#D55E00" 
+)) +
+labs(
+x = NULL,
+y = "Number of cases",
+fill = NULL
+) +
+theme_classic(base_size = 16) +
+theme(
+legend.position = "top",
+panel.grid.minor = element_blank()
+)
+``
+
+
+```
+
+
+# Highest and lowest incidence rates
+```{r}
+incidence_year <- ie_inc_df %>%
+  group_by(year) %>%
+  summarise(
+    cases = sum(cases),
+    population = sum(population),
+    incidence = (cases / population) * 100000,
+    .groups = "drop"
+  )
+
+bind_rows(incidence_year %>% 
+    slice_max(incidence, n= 1) %>% mutate(type = "Highest"),
+incidence_year %>% 
+    slice_min(incidence, n= 1) %>% mutate(type = "Lowest")) %>%  
+  select(type, year, incidence)
+
+```
+
+# Overall percentage change in incidence during the study period
+
+```{r}
+first_year <- incidence_year %>%
+  filter(year == min(year))
+
+last_year <- incidence_year %>%
+  filter(year == max(year))
+
+(last_year$incidence / first_year$incidence - 1) * 100
+
+```
+
+# Percentage change in the oldest population
+```{r}
+
+ie_inc_eighty <- ie_inc_df %>%
+  mutate(
+    age_group = case_when(
+      age < 60 ~ "<60",
+      age >= 60 & age < 70 ~ "60-69",
+      age >= 70 & age < 80 ~ "70-79",
+      age >= 80 ~ "80+",
+    )
+  ) %>% filter(age_group == "80+")
+
+ie_inc_eighty <- ie_inc_eighty %>%
+  group_by(year) %>%
+  summarise(
+    cases = sum(cases),
+    population = sum(population),
+    incidence = cases / population * 100000,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(cases))
+
+eighty_first_year <- ie_inc_eighty %>%
+  filter(year == min(year))
+
+eighty_last_year <- ie_inc_eighty %>%
+  filter(year == max(year))
+
+(age_last_year$incidence / age_first_year$incidence - 1) * 100
+
+```
