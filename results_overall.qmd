@@ -31,6 +31,24 @@ subdir2 <- "/Studier/Incidence_of_IE/Data/RData/"
 # load(str_c(directory, subdir_rdata, file)) Use if/when weights are needed
 load(str_c(directory, subdir1, "endocarditis_joined_total.RData"))
 load(str_c(directory, subdir2, "ie_inc_df.RData"))
+
+endocarditis_joined_total <- endocarditis_joined_total %>% filter(year_of_diagnosis >= 1997, year_of_diagnosis <= 2023)
+  
+
+endocarditis_joined_total <- endocarditis_joined_total %>%
+  mutate(
+    ie_type = factor(
+      protesendokardit,
+      levels = c(0, 1),
+      labels = c("NVE", "PVE")
+    ),
+    surgery = factor(
+      op_endocarditis,
+      levels = c(0, 1),
+      labels = c("No surgery", "Surgery")
+    )
+  )
+
 ```
 
 ### Missing data
@@ -71,6 +89,38 @@ endocarditis_joined_total %>%
 
 ```
 
+## Number of patients by age group
+```{r}
+endocarditis_joined_total <- endocarditis_joined_total %>%
+  mutate(age = floor(age_at_diagnosis),
+    age_group = case_when(
+      age < 60 ~ "<60",
+      age >= 60 & age < 70 ~ "60-69",
+      age >= 70 & age < 80 ~ "70-79",
+      age >= 80 ~ "80+",
+    )
+  )
+
+endocarditis_joined_total %>% 
+  mutate(
+    age_group = case_when(
+      age < 60 ~ "<60",
+      age >= 60 & age < 70 ~ "60-69",
+      age >= 70 & age < 80 ~ "70-79",
+      age >= 80 ~ "80+",
+    )
+  ) %>% 
+  count(age_group) %>% 
+  mutate(percent = round(100*n / sum(n), 1))
+
+endocarditis_joined_total %>% 
+  filter(year_of_diagnosis == "1997" | year_of_diagnosis == "2023") %>% 
+  group_by(year_of_diagnosis) %>% 
+  count(age_group) %>% 
+  mutate(percent = round(100*n / sum(n), 1))
+
+```
+
 ## Age distribution, summary statistics
 ```{r}
 endocarditis_joined_total %>%
@@ -86,65 +136,7 @@ sd = sd(age_at_diagnosis, na.rm = TRUE)
 )
 ```
 
-## Age distribution, age pyramid by sex
-```{r}
 
-endocarditis_joined_total <- endocarditis_joined_total %>%
-mutate(
-age_group = case_when(
-age_at_diagnosis < 60 ~ "<60",
-age_at_diagnosis >= 60 & age_at_diagnosis < 70 ~ "60-69",
-age_at_diagnosis >= 70 & age_at_diagnosis < 80 ~ "70-79",
-age_at_diagnosis >= 80 ~ "80+"
-),
-age_group = factor(
-age_group,
-levels = c("<60", "60-69", "70-79", "80+")
-)
-)
-
-endocarditis_joined_total <- endocarditis_joined_total %>%
-mutate(
-sex = factor(
-sex,
-levels = c(0, 1),
-labels = c("Male", "Female")
-)
-)
-
-age_sex_pyramid_df <- endocarditis_joined_total %>%
-  count(sex, age_group) %>%
-  group_by(sex) %>%
-  mutate(pct = 100 * n / sum(n)) %>%
-  ungroup() %>%
-  mutate(pct = ifelse(sex == "Male", -pct, pct)
-)
-
-
-ggplot(age_sex_pyramid_df,
-aes(x = age_group,
-y = n,
-fill = sex)) +
-geom_col(position = position_stack(reverse = TRUE)) +
-coord_flip() +
-scale_fill_manual(values = c(
-"Male" = "#0072B2", 
-"Female" = "#D55E00" 
-)) +
-labs(
-x = NULL,
-y = "Number of cases",
-fill = NULL
-) +
-theme_classic(base_size = 16) +
-theme(
-legend.position = "top",
-panel.grid.minor = element_blank()
-)
-``
-
-
-```
 
 
 # Highest and lowest incidence rates
@@ -175,25 +167,29 @@ first_year <- incidence_year %>%
 last_year <- incidence_year %>%
   filter(year == max(year))
 
-(last_year$incidence / first_year$incidence - 1) * 100
+pct_increase <- (last_year$incidence / first_year$incidence - 1) * 100
+
+tibble(
+Metric = "Percentage increase first to last year",
+Value = sprintf("%.1f%%", pct_increase)
+)
 
 ```
 
-# Percentage change in the oldest population
+# Percentage change first to last year by age group
 ```{r}
 
-ie_inc_eighty <- ie_inc_df %>%
+ie_inc_df <- ie_inc_df %>%
   mutate(
     age_group = case_when(
       age < 60 ~ "<60",
       age >= 60 & age < 70 ~ "60-69",
       age >= 70 & age < 80 ~ "70-79",
       age >= 80 ~ "80+",
-    )
-  ) %>% filter(age_group == "80+")
+    ))
 
-ie_inc_eighty <- ie_inc_eighty %>%
-  group_by(year) %>%
+ie_inc_age <- ie_inc_df %>%
+  group_by(year, age_group) %>%
   summarise(
     cases = sum(cases),
     population = sum(population),
@@ -202,12 +198,44 @@ ie_inc_eighty <- ie_inc_eighty %>%
   ) %>%
   arrange(desc(cases))
 
-eighty_first_year <- ie_inc_eighty %>%
-  filter(year == min(year))
+inc_age_first_last <- ie_inc_age %>%
+arrange(age_group, year) %>%
+group_by(age_group) %>%
+summarise(
+first_year = first(year),
+last_year = last(year),
+incidence_first = first(incidence),
+incidence_last = last(incidence),
+pct_change = 100 * (incidence_last - incidence_first) / incidence_first
+)
 
-eighty_last_year <- ie_inc_eighty %>%
-  filter(year == max(year))
+inc_age_first_last
+  
 
-(age_last_year$incidence / age_first_year$incidence - 1) * 100
+```
+
+# Percentage change first to last year and 2010 to last year, in proportion of PVE
+```{r}
+
+perc_ie_type <- endocarditis_joined_total %>%
+count(year_of_diagnosis, ie_type, name = "cases") %>%
+group_by(year_of_diagnosis) %>%
+mutate(
+percentage = 100 * cases / sum(cases)
+) %>%
+ungroup()
+
+PVE_increase_2005_2024 <- perc_ie_type %>%
+filter(ie_type == "PVE") %>%
+summarise(
+perc_first = percentage[which.min(abs(year_of_diagnosis))],
+perc_05 = percentage[which.min(abs(year_of_diagnosis - 2005))],
+perc_24 = percentage[which.max(year_of_diagnosis)],
+change_pp = perc_24 - perc_05,
+change_pp_f_l = perc_24 - perc_first
+)
+
+
+PVE_increase_2005_2024
 
 ```

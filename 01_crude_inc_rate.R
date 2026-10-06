@@ -16,7 +16,7 @@ subdir1<- "/Data/RData/"
 subdir2<- "/Data/SCB/Population_census_data_SCB/"
 
 
-# load(str_c(directory, subdir_rdata, file)) Use if/when weights are needed
+# load(str_c(directory, subdir_rdata, file))
 load(str_c(directory, subdir1, "endocarditis_joined_total.RData"))
 
 
@@ -105,10 +105,10 @@ incidence_year <- ie_inc_df %>%
     .groups = "drop"
   )
 
-# Calculating 95% confidence intervals
-incidence_year <- ie_inc_df |>
-  group_by(year) |>
-  summarize(
+# Calculating and including 95% confidence intervals
+incidence_year <- ie_inc_df  %>%
+  group_by(year) %>%
+  summarise(
     cases = sum(cases),
     population = sum(population),
     incidence = cases / population * 100000,
@@ -144,11 +144,10 @@ incidence_year <- incidence_year %>%
 
 ### Plotting the data
 inc_fig_simple <- ggplot(incidence_year, aes(x = year, y = incidence)) +
-  geom_line(color = "#1F4E79", linewidth = 1) +
   geom_point(color = "#1F4E79", size = 2) +
 
   scale_y_continuous(
-    name = "Incidence per 100,000 inhabitants",
+    name = "Incidence per 100,000 person-years",
     limits = c(0, NA),
     breaks = seq(0, 15, by = 3),
     expand = expansion(mult = c(0, 0.05))
@@ -158,18 +157,18 @@ inc_fig_simple <- ggplot(incidence_year, aes(x = year, y = incidence)) +
     breaks = seq(min(incidence_year$year), max(incidence_year$year), by = 2)
   ) +
 
-# # Fitted trend (Poisson, linear trend)
-#   geom_line(aes(y = predicted),
-#           colour = "red",
-#           linewidth = 1) +
-#
-#   # Confidence band around trend
-#   geom_ribbon(
-#     aes(ymin = fit_lower,
-#         ymax = fit_upper),
-#     fill = "red",
-#     alpha = 0.2
-#   ) +
+# Fitted trend (Poisson, linear trend)
+  geom_line(aes(y = fit),
+          colour = "red",
+          linewidth = 1) +
+
+# Confidence band around trend
+  geom_ribbon(
+    aes(ymin = fit_lower,
+        ymax = fit_upper),
+    fill = "red",
+    alpha = 0.2
+  ) +
 
   theme_classic(base_size = 16) +
   theme(
@@ -255,13 +254,13 @@ inc_fig_1 <- ggplot() +
     breaks = seq(0, 2024, by = 5),
     expand = expansion(mult = c(0, 0.05))
   ) +
-  geom_line(
-    data = incidence_year,
-    aes(year, incidence),
-    alpha = 1,
-    color = "black",
-    linewidth = 0.5
-  ) +
+  # geom_line(
+  #   data = incidence_year,
+  #   aes(year, incidence),
+  #   alpha = 1,
+  #   color = "black",
+  #   linewidth = 0.5
+  # ) +
   geom_ribbon(
     data = newdat,
     aes(year,

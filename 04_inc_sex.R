@@ -26,40 +26,40 @@ incidence_sex_yr <- ie_inc_df %>%
     .groups = "drop"
   )
 
-incidence_sex_yr <- incidence_sex_yr %>%
-  mutate(
-    lower_ci = qchisq(0.025, 2 * cases) /
-      (2 * population) * 100000,
-    upper_ci = qchisq(0.975, 2 * (cases + 1)) /
-      (2 * population) * 100000
-  )
-
-# Creating poisson model
-trend_model <- glm(cases ~ year, offset = log(population), family = poisson(), data = incidence_sex_yr)
-
-# Checking for overdispersion (answer = 40.18682)
-deviance(trend_model) / df.residual(trend_model)
-
-# Calculating the Pearson dispersion
-sum(residuals(trend_model, type = "pearson")^2) /
-  df.residual(trend_model)
-
-m1 <- glm(
-  cases ~ year,
-  offset = log(population),
-  family = quasipoisson,
-  data = incidence_sex_yr
-)
-
-m_spline <- glm(
-  cases ~ ns(year, df = 3),
-  offset = log(population),
-  family = quasipoisson,
-  data = incidence_sex_yr
-)
-
-# anova test gives non-significant p-value (P = appr. 0.64), therefore linear model is just as good as splline model.
-anova(m1, m_spline, test = "F")
+# incidence_sex_yr <- incidence_sex_yr %>%
+#   mutate(
+#     lower_ci = qchisq(0.025, 2 * cases) /
+#       (2 * population) * 100000,
+#     upper_ci = qchisq(0.975, 2 * (cases + 1)) /
+#       (2 * population) * 100000
+#   )
+#
+# # Creating poisson model
+# trend_model <- glm(cases ~ year, offset = log(population), family = poisson(), data = incidence_sex_yr)
+#
+# # Checking for overdispersion (answer = 40.18682)
+# deviance(trend_model) / df.residual(trend_model)
+#
+# # Calculating the Pearson dispersion
+# sum(residuals(trend_model, type = "pearson")^2) /
+#   df.residual(trend_model)
+#
+# m1 <- glm(
+#   cases ~ year,
+#   offset = log(population),
+#   family = quasipoisson,
+#   data = incidence_sex_yr
+# )
+#
+# m_spline <- glm(
+#   cases ~ ns(year, df = 3),
+#   offset = log(population),
+#   family = quasipoisson,
+#   data = incidence_sex_yr
+# )
+#
+# # anova test gives non-significant p-value (P = appr. 0.64), therefore linear model is just as good as splline model.
+# anova(m1, m_spline, test = "F")
 
 ### Fitting linear quasi-Poisson model
 
@@ -69,47 +69,65 @@ m_sex <- glm(
   data = incidence_sex_yr
 )
 
-incidence_sex_yr$pred_cases <- predict(
+pred <- predict(
   m_sex,
-  type = "response"
+  type = "link",
+  se.fit = TRUE
 )
 
 incidence_sex_yr <- incidence_sex_yr %>%
   mutate(
-    pred_incidence = pred_cases / population * 100000
+    fit_cases = exp(pred$fit),
+    lower_cases = exp(pred$fit - 1.96 * pred$se.fit),
+    upper_cases = exp(pred$fit + 1.96 * pred$se.fit),
+
+    pred_incidence = fit_cases / population * 100000,
+    lower_incidence = lower_cases / population * 100000,
+    upper_incidence = upper_cases / population * 100000
   )
 
 ### Plotting incidence among males and females
-sex_inc_fig <- ggplot(incidence_sex_yr,
-       aes(x = year,
-           color = sex)) +
-
-  geom_point(aes(y = incidence),
-             size = 2) +
-
-  geom_line(aes(y = pred_incidence),
-            linewidth = 1) +
-
+sex_inc_fig <- ggplot(
+  incidence_sex_yr,
+  aes(x = year, colour = sex, fill = sex)
+) +
+  geom_ribbon(
+    aes(
+      ymin = lower_incidence,
+      ymax = upper_incidence
+    ),
+    alpha = 0.15,
+    colour = NA
+  ) +
+  geom_point(
+    aes(y = incidence),
+    size = 2
+  ) +
+  geom_line(
+    aes(y = pred_incidence),
+    linewidth = 1
+  ) +
   scale_color_manual(values = c(
     "Male" = "#0072B2",
     "Female" = "#D55E00"
   )) +
-
+  scale_fill_manual(values = c(
+    "Male" = "#0072B2",
+    "Female" = "#D55E00"
+  )) +
   labs(
     x = NULL,
     y = "Incidence per 100,000 person-years",
-    color = NULL
+    colour = NULL,
+    fill = NULL
   ) +
-
-  theme_classic(base_size = 16) +
-
+  theme_classic(base_size = 18) +
   theme(
     legend.position = "top"
   )
-
 sex_inc_fig
 
-### SAVING smoothly fitted curve
+### SAVING smoothly fitted curve, based on spline function with 95% confidence bands
 subdir3 <- "/Studier/Incidence_of_IE/Fig/"
 pdf(str_c(directory, subdir3, "sex_inc_fig.pdf"), width = 15, height = 10, onefile = F)
 sex_inc_fig
@@ -142,7 +160,9 @@ sex_irr_fig <- ggplot(
   incidence_ratio,
   aes(year, irr)
 ) +
-  geom_line(linewidth = 1.1) +
+  geom_line(linewidth = 1.1,
+            colour = "dark grey") +
+  scale_y_continuous(limits = c(0,3)) +
   geom_hline(
     yintercept = 1,
     linetype = "dashed"
@@ -151,7 +171,7 @@ sex_irr_fig <- ggplot(
     x = "Year",
     y = "Male/Female incidence rate ratio"
   ) +
-  theme_classic(base_size = 16)
+  theme_classic(base_size = 18)
 
 sex_irr_fig
 
