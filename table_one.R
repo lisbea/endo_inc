@@ -18,10 +18,16 @@ endocarditis_joined_total <- endocarditis_joined_total %>% filter(year_of_diagno
 
 endocarditis_joined_total <- endocarditis_joined_total %>%
   mutate(
-    time_ep = as_factor(case_when(
-      year_of_diagnosis < 2006 ~ "1997-2005",
-      year_of_diagnosis >= 2006 & year_of_diagnosis < 2015 ~ "2006-2014",
-      year_of_diagnosis >= 2015 & year_of_diagnosis < 2024 ~ "2015-2023")),
+  time_ep = factor(case_when(
+        year_of_diagnosis < 2006 ~ "1997-2005",
+        year_of_diagnosis >= 2006 & year_of_diagnosis < 2015 ~ "2006-2014",
+        year_of_diagnosis >= 2015 & year_of_diagnosis < 2024 ~ "2015-2023",
+        TRUE ~ NA_character_),
+      levels = c(
+        "1997-2005",
+        "2006-2014",
+        "2015-2023"),
+      ordered = TRUE),
   age_group = case_when(
     age_at_diagnosis < 60 ~ "<60",
     age_at_diagnosis >= 60 & age_at_diagnosis < 70 ~ "60-69",
@@ -45,16 +51,51 @@ endocarditis_joined_total <- endocarditis_joined_total %>%
       str_detect(final_infectionsite, "tricuspid|pulmonary") ~
       "Double-sided",
     # Left-sided
-    str_detect(final_infectionsite, "aortic|mitral") ~
+    str_detect(final_infectionsite, "aortic|mitral") |
+      (is.na(final_infectionsite) & left_sided_IE == 1) ~
       "Left-sided",
     # Right-sided
-    str_detect(final_infectionsite, "tricuspid|pulmonary") ~
+    str_detect(final_infectionsite, "tricuspid|pulmonary") |
+      (is.na(final_infectionsite) & left_sided_IE == 0) ~
       "Right-sided",
     TRUE ~ NA_character_),
     levels = c("Left-sided",
                 "Right-sided",
                 "Double-sided",
                 "CIED only")))
+
+
+table(endocarditis_joined_total$infection_site)
+
+left_unclassified <- endocarditis_joined_total %>%
+  filter(
+    left_sided_IE == 1 | left_sided_IE == 0,
+    is.na(infection_site))
+
+
+# right_left_conflict <- endocarditis_joined_total %>%
+#   filter(
+#     infection_site == "Right-sided",
+#     left_sided_IE == 1
+#   )
+#
+# left_left_conflict <- endocarditis_joined_total %>%
+#   filter(
+#     infection_site == "Left-sided" |
+#     left_sided_IE == 1
+#   )
+#
+# cied_left_conflict <- endocarditis_joined_total %>%
+#   filter(
+#     infection_site == "CIED only",
+#     left_sided_IE == 1
+#   )
+#
+# cied_only <- endocarditis_joined_total %>%
+#   filter(
+#     infection_site == "CIED only"
+#   )
+
 
 # endocarditis_joined_total %>%
 #   count(protesendokardit)
@@ -191,12 +232,12 @@ variables <-            c("lpnr",
                            # "PERFUSION_AORTAOCCTIME",
                            # "PERFUSION_ECCTIME",
                            # "STROKE_COMPL",
-                           "BMI",
+                           # "BMI",
                            # "WEIGHT",
                            # "year_of_surgery",
                            # "crea_preop",
                            # "hospital",
-                           "lvef",
+                           # "lvef",
                            # "emergent_op",
                            # "MekAVR",
                            # "BioAVR",
@@ -256,7 +297,7 @@ variables <-            c("lpnr",
                            # "left_sided_IE",
                            # "year_of_diagnosis",
                            "prior_cardiac_surgery",
-                           "egfr_cat",
+                           # "egfr_cat",
                            # "dispinkfam_Q4",
                            # "severe_periodontitis",
                            # "severe_caries",
@@ -292,12 +333,12 @@ endocarditis_joined_total <- endocarditis_joined_total %>%  rename(
                                          `Peripheral vascular disease` = PVD_preop,
                                          `Prior stroke` = stroke_preop,
                                          `Prior PCI` = PCI_preop,
-                                         `eGFR, mL/min/1.73 m2` = egfr_cat,
+                                         # `eGFR, mL/min/1.73 m2` = egfr_cat,
                                          `Dialysis` = dialys_pre,
                                          `Chronic kidney disease` = ckd_preop,
-                                         `Left ventricular ejection fraction` = lvef,
+                                         # `Left ventricular ejection fraction` = lvef,
                                          `Alcohol dependence` = alco_preop,
-                                         `Body mass index, kg/m2` = BMI,
+                                         # `Body mass index, kg/m2` = BMI,
                                          `Married` = married,
                                          `Household income` = dispink_mean_pre,
                                          `Education` = EDU,
@@ -335,20 +376,20 @@ myVars <-   c( "Age, years (median [IQR])",
               "Prior atrial fibrillation",
               "Prior PCI",
               "Chronic kidney disease",
-              "Body mass index, kg/m2",
-              "Left ventricular ejection fraction",
+              # "Body mass index, kg/m2",
+              # "Left ventricular ejection fraction",
               "Diabetes mellitus",
               "History of cancer",
               "Dialysis",
               "Hypertension",
               "Prior cardiac surgery (any)",
-              "eGFR, mL/min/1.73 m2",
+              # "eGFR, mL/min/1.73 m2",
               "Education",
               "Non-Nordic birth region"
              )
 
 
-catVars <- endocarditis_joined_total %>% select(-`Time episode`, -`Age, years (median [IQR])`, -`Female sex`, -`Body mass index, kg/m2`, -`Household income`, -`Length of stay`) %>% names()
+catVars <- endocarditis_joined_total %>% select(-`Time episode`, -`Age, years (median [IQR])`, -`Household income`, -`Length of stay`) %>% names()
 
 skewed <- c("Age, years (median [IQR])")
 
@@ -371,11 +412,11 @@ tab1_word <- print(tab1,
                    dropEqual = T,
                    explain = F)
 
-tab1_df <- as_tibble(tab1_word, rownames = "Variable") %>% select(-test)
+tab1_df <- as_tibble(tab1_word, rownames = "Variable")
 
 tab1_df$Variable[1] <- "No."
 
-header <- str_squish(str_remove("Table 1. Baseline characteristics by time period", "\n"))
+header <- str_squish(str_remove("Table 1. Baseline characteristics by time-period", "\n"))
 
 # Check order here according to order of variables in table 1
 footer <- str_squish(str_remove("Numbers are No. (%) unless otherwise noted. IQR = interquartile range; Q = quartile;
@@ -386,12 +427,12 @@ flextable_1 <- bioavr_tab(tab1_df, header, footer)
 
 
 #### Save as docx
-subdir <-
-file <-
-location_tab_1 <- str_c(directory, subdir, file)
+subdir2 <- "/Studier/Incidence_of_IE/Tab/"
+file <- "inc_tab_1.docx"
+location_tab_1 <- str_c(directory, subdir2, file)
 
 save_as_docx(flextable_1, path = location_tab_1,
-             pr_section = prop_section(page_size = page_size(orient = "portrait"), type = "continuous"))
+             pr_section = prop_section(page_size = page_size(orient = "landscape"), type = "continuous"))
 
 
 
