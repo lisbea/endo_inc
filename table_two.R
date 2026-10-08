@@ -14,12 +14,14 @@ directory <- system("find ~ -name \"*- ENDO_CARE*\" -type d -depth 5 -maxdepth 5
 subdir<- "/Data/RData/"
 load(str_c(directory, subdir, "endocarditis_joined_total.RData"))
 
-endocarditis_joined_total <- endocarditis_joined_total %>% filter(year_of_diagnosis >= 1997, year_of_diagnosis <= 2023)
-srie <- endocarditis_joined_total %>% filter(endoreg == 1 & year_of_diagnosis > 2006)
+endocarditis_joined_total <- endocarditis_joined_total %>% filter(year_of_diagnosis >= 2007, year_of_diagnosis <= 2023)
+srie <- endocarditis_joined_total %>% filter(endoreg == 1)
 
 bioavr_flextab_defaults()
 
-#### OBS!!! Still need to categorize valve vegetation size to >10 and <10 mm
+#### OBS!!! Still need to categorize valve vegetation size to >10 and <10 mm properly - right nos some seem to not be captured!!!
+
+
 
 srie <- srie %>%
   mutate(
@@ -43,6 +45,37 @@ srie <- srie %>%
       op_endocarditis,
       levels = c(0, 1),
       labels = c("No surgery", "Surgery")),
+    bacteria_groups = recode(
+      bacteria_groups,
+      "S_aureus" = "Staphylococcus aureus",
+      "Oral_streptococci" = "Oral streptococci",
+      "Enterococci" = "Enterococci",
+      "Beta_hemolytic_streptococci" = "Beta-haemolytic streptococci",
+      "KNS" = "Coagulase-negative staphylococci",
+      "HACEK" = "HACEK",
+      "Culture_neg" = "Culture Negative",
+      "multiorganism" = "Polymicrobial",
+      "Gram_neg" = "Gram negative bacteria",
+      "No_pathogen_found" = "No pathogen found",
+      "Fungi" = "Fungi",
+      "Other" = "Other"
+    ),
+    bacteria_groups = factor(
+      bacteria_groups,
+      levels = c(
+        "Staphylococcus aureus",
+        "Oral streptococci",
+        "Enterococci",
+        "Beta-haemolytic streptococci",
+        "Coagulase-negative staphylococci",
+        "HACEK",
+        "Polymicrobial",
+        "Gram negative bacteria",
+        "No pathogen found",
+        "Fungi",
+        "Other",
+        "Culture Negative"
+      )),
     infection_site = factor(case_when(
       # Only CIED
       str_detect(final_infectionsite, "CIED") &
@@ -84,10 +117,21 @@ srie <- srie %>%
                  "Right-sided & CIED",
                  "Double-sided",
                  "Double-sided & CIED",
-                 "CIED only")))
+                 "CIED only")),
+    vegetation_size_mm = case_when(
+      vegetation_size_mm < 10 ~ "<10 mm",
+      vegetation_size_mm >= 10 ~ "≥10 mm",
+      TRUE ~ NA_character_
+    ),
+    vegetation_size_mm = factor(
+      vegetation_size_mm,
+      levels = c("<10 mm", "≥10 mm")
+    )
 
+    table(srie$vegetation_size_mm)
 
-
+table(srie$bacteria_groups)
+table(srie$vegetation_size_mm)
 table(endocarditis_joined_total$congenital_endoreg_pre, endocarditis_joined_total$CHD_preop)
 table(srie$time_ep)
 
@@ -334,7 +378,7 @@ myVars <-                     c("Age, years (median [IQR])",
                                 "Valve surgery",
                                 "Abscess",
                                 "Valve vegetation",
-                                "Vegetation size (mm)",
+                                "Vegetation size (mm)*",
                                 "Embolic events",
                                 "Duke criteria")
 
@@ -363,14 +407,14 @@ tab2_word <- print(tab2,
 
 
 
-tab2_df <- as_tibble(tab2_word, rownames = "Variable")
+tab2_df <- as_tibble(tab2_word, rownames = "Variable") %>% select(-test)
 
 tab2_df$Variable[1] <- "No."
 
 header <- str_squish(str_remove("Table 2. Baseline characteristics in 7,080 patients registered in the Swedish Registry of Infective Endocarditis, classified by time-period", "\n"))
 
 # Check order here according to order of variables in table 1
-footer <- str_squish(str_remove("Numbers are No. (%) unless otherwise noted. IQR = interquartile range; Q = quartile","\n"))
+footer <- str_squish(str_remove("Numbers are No. (%) unless otherwise noted. IQR = interquartile range; Q = quartile. HACEK = Haemophilus, Aggregatibacter, Cardiobacterium, Eikenella and Kingella. *Vegetation size was available for 2,987 patients with documented vegetation.","\n"))
 
 
 flextable_2 <- bioavr_tab(tab2_df, header, footer)
