@@ -18,7 +18,7 @@ subdir1<- "/Data/RData/"
 # load(str_c(directory, subdir_rdata, file))
 load(str_c(directory, subdir1, "endocarditis_joined_total.RData"))
 
-endocarditis_joined_total <- endocarditis_joined_total %>% filter(year_of_diagnosis >2006 & year_of_diagnosis < 2024)
+endocarditis_joined_total <- endocarditis_joined_total %>% filter(year_of_diagnosis >2006 & year_of_diagnosis <= 2023)
 
 srie <- endocarditis_joined_total %>% filter(endoreg == 1)
 

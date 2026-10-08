@@ -298,7 +298,7 @@ variables <-            c("lpnr",
                            # "year_of_diagnosis",
                            "prior_cardiac_surgery",
                            # "egfr_cat",
-                           # "dispinkfam_Q4",
+                           "dispinkfam_Q4",
                            # "severe_periodontitis",
                            # "severe_caries",
                            # "poor_oral_health",
@@ -314,7 +314,7 @@ endocarditis_joined_total <- endocarditis_joined_total %>%  rename(
                                          `Age group` = age_group,
                                          `Female sex` = sex,
                                          `Time episode` = time_ep,
-                                         `Drug users` = drug_use_pre,
+                                         `Drug user` = drug_use_pre,
                                          `Congenital heart disease` = CHD_preop,
                                          `Prosthetic valve endocarditis` = protesendokardit,
                                          `Valve surgery` = op_endocarditis,
@@ -340,7 +340,7 @@ endocarditis_joined_total <- endocarditis_joined_total %>%  rename(
                                          `Alcohol dependence` = alco_preop,
                                          # `Body mass index, kg/m2` = BMI,
                                          `Married` = married,
-                                         `Household income` = dispink_mean_pre,
+                                         `Household income` =  dispinkfam_Q4,
                                          `Education` = EDU,
                                          `Prior pacemaker/ICD`= CIED_pre,
                                          `Non-Nordic birth region` = birthregion)
@@ -361,7 +361,7 @@ myVars <-   c( "Age, years (median [IQR])",
                "Infection site",
                "Prosthetic valve endocarditis",
                "Congenital heart disease",
-               "Drug users",
+               "Drug user",
                "Prosthetic valve endocarditis",
                "Valve surgery",
                "Chronic obstructive pulmonary disease",
@@ -420,7 +420,7 @@ header <- str_squish(str_remove("Table 1. Baseline characteristics by time-perio
 
 # Check order here according to order of variables in table 1
 footer <- str_squish(str_remove("Numbers are No. (%) unless otherwise noted. IQR = interquartile range; Q = quartile;
- PCI = percutaneous coronary intervention; eGFR = estimated glomerular filtration rate", "\n"))
+ PCI = percutaneous coronary intervention", "\n"))
 
 
 flextable_1 <- bioavr_tab(tab1_df, header, footer)
