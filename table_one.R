@@ -19,13 +19,13 @@ endocarditis_joined_total <- endocarditis_joined_total %>% filter(year_of_diagno
 endocarditis_joined_total <- endocarditis_joined_total %>%
   mutate(
   time_ep = factor(case_when(
-        year_of_diagnosis < 2006 ~ "1997-2005",
-        year_of_diagnosis >= 2006 & year_of_diagnosis < 2015 ~ "2006-2014",
+        year_of_diagnosis < 2007 ~ "1997-2006",
+        year_of_diagnosis >= 2007 & year_of_diagnosis < 2015 ~ "2007-2014",
         year_of_diagnosis >= 2015 & year_of_diagnosis < 2024 ~ "2015-2023",
         TRUE ~ NA_character_),
       levels = c(
-        "1997-2005",
-        "2006-2014",
+        "1997-2006",
+        "2007-2014",
         "2015-2023"),
       ordered = TRUE),
   age_group = case_when(
@@ -65,7 +65,8 @@ endocarditis_joined_total <- endocarditis_joined_total %>%
                 "CIED only")))
 
 
-table(endocarditis_joined_total$infection_site)
+table(endocarditis_joined_total$infection_site, useNA = "always")
+table(endocarditis_joined_total$final_infectionsite, useNA = "always")
 
 left_unclassified <- endocarditis_joined_total %>%
   filter(
@@ -350,7 +351,7 @@ endocarditis_joined_total <- endocarditis_joined_total %>%  rename(
 
 # dput(names(endocarditis_joined_total))
 # datapasta::vector_paste_vertical() # Pastes the clipboard as a vertical vector, also available as an addin
-
+table(endocarditis_joined_total$"Prosthetic valve endocarditis")
 
 myVars <-   c( "Age, years (median [IQR])",
                "Female sex",
@@ -362,7 +363,6 @@ myVars <-   c( "Age, years (median [IQR])",
                "Prosthetic valve endocarditis",
                "Congenital heart disease",
                "Drug user",
-               "Prosthetic valve endocarditis",
                "Valve surgery",
                "Chronic obstructive pulmonary disease",
               "Prior myocardial infarction",
@@ -406,17 +406,19 @@ tab1_word <- print(tab1,
                    noSpaces = T,
                    smd = F,
                    missing = F,
-                   test = F, # adds P-value
+                   test = T, # adds P-value
                    contDigits = 1,
                    printToggle = F,
                    dropEqual = T,
                    explain = F)
 
+tab1_word <- tab1_word[, colnames(tab1_word) != "test"]
 tab1_df <- as_tibble(tab1_word, rownames = "Variable")
 
 tab1_df$Variable[1] <- "No."
 
-header <- str_squish(str_remove("Table 1. Baseline characteristics by time-period", "\n"))
+
+header <- str_squish(str_remove("Table 1. Baseline characteristics in 20,943 patients, stratified by time-period", "\n"))
 
 # Check order here according to order of variables in table 1
 footer <- str_squish(str_remove("Numbers are No. (%) unless otherwise noted. IQR = interquartile range; Q = quartile;

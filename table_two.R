@@ -126,14 +126,21 @@ srie <- srie %>%
     vegetation_size_mm = factor(
       vegetation_size_mm,
       levels = c("<10 mm", "≥10 mm")
-    )
+    ),
+    duke_criteria = factor(factor(case_when(
+      duke_criteria == 0 ~ "Definitive endocarditis",
+      duke_criteria == 1 ~ "Possible endocarditis",
+      duke_criteria == "." ~ NA_character_))))
 
-    table(srie$vegetation_size_mm)
-
-table(srie$bacteria_groups)
-table(srie$vegetation_size_mm)
-table(endocarditis_joined_total$congenital_endoreg_pre, endocarditis_joined_total$CHD_preop)
-table(srie$time_ep)
+table(srie$duke_criteria, useNA = "always")
+table(srie$bacteria_groups, useNA = "always")
+table(srie$vegetation_size_mm, useNA = "always")
+table(srie$"Valve vegetation", useNA = "always")
+table(srie$"Vegetation size (mm)", useNA = "always")
+table(srie$vegetation, srie$vegetation_size_mm, useNA = "always")
+table(endocarditis_joined_total$congenital_endoreg_pre, endocarditis_joined_total$CHD_preop, useNA = "always")
+table(srie$time_ep, useNA = "always")
+table(srie$protesendokardit, useNA = "always")
 
 # clipr::write_clip(names(srie))
 # dput(names(srie))
@@ -160,7 +167,7 @@ variables <-     c("lpnr",
                     # "reendocarditis_14d_out",
                     # "reendocarditis_diagdate",
                     # "stay_group",
-                    "length_of_stay_group",
+                    # "length_of_stay_group",
                     # "dead",
                     # "deathdate",
                     # "opdate_endoreg",
@@ -313,7 +320,7 @@ variables <-     c("lpnr",
                     # "diabetes_pre",
                     # "cancer_pre",
                     # "dialys_pre",
-                    "op_endocarditis",
+                    # "op_endocarditis",
                     # "hypertension_pre",
                     # "CIED_pre",
                     # "CIED_out_30",
@@ -332,15 +339,14 @@ variables <-     c("lpnr",
                     # "severe_caries",
                     # "poor_oral_health",
                     "time_ep",
-                    "age_group",
-                    "infection_site")
+                    "age_group")
+                    # "infection_site")
 
 srie <- srie %>% select(all_of(variables)) %>% select(-"lpnr")
 # clipr::write_clip(names(srie))
 # dput(names(srie))
 # datapasta::vector_paste_vertical() # Pastes the clipboard as a vertical vector, also available as an addin
 srie <- srie %>%  rename(
-                    `Length of stay (days)`      = "length_of_stay_group",
                     `Valve vegetation`           = "vegetation",
                     `Abscess`                    = "abscess",
                     `Embolic events`             = "emboli",
@@ -353,12 +359,12 @@ srie <- srie %>%  rename(
                     `Female`                     = "sex",
                     # `Non-Nordic birth region`    = "birthregion",
                     `Drug user`                  = "drug_use_pre",
-                    `Surgery`                    = "op_endocarditis",
+                    # `Surgery`                    = "op_endocarditis",
                     `Prosthetic valve endocarditis` = "protesendokardit",
                     `Household income`           = "dispinkfam_Q4",
                     `Time-period`                = "time_ep",
-                    `Age group`                  = "age_group",
-                    `Infection site`             = "infection_site")
+                    `Age group`                  = "age_group")
+                    # `Infection site`             = "infection_site")
 
 # clipr::write_clip(srie %>% dplyr::select(-"Time-period") %>% names())
 # dput(names(srie))
@@ -369,20 +375,20 @@ myVars <-                     c("Age, years (median [IQR])",
                                 "Female",
                                 "Education",
                                 # "Non-Nordic birth region",
-                                "Length of stay (days)",
+                                # "Length of stay (days)",
                                 "Congenital heart disease",
                                 "Drug user",
                                 "Prosthetic valve endocarditis",
                                 "Bacteria",
-                                "Infection site",
-                                "Valve surgery",
+                                # "Infection site",
+                                # "Valve surgery",
                                 "Abscess",
                                 "Valve vegetation",
-                                "Vegetation size (mm)*",
+                                "Vegetation size (mm)",
                                 "Embolic events",
                                 "Duke criteria")
 
-catVars <- srie %>% select(-`Time-period`, -`Age, years (median [IQR])`, -`Length of stay (days)`) %>% names()
+catVars <- srie %>% select(-`Time-period`, -`Age, years (median [IQR])`) %>% names()
 skewed <- c("Age, years (median [IQR])")
 
 tab2 <- srie %>% CreateTableOne(vars = myVars,
@@ -393,17 +399,21 @@ tab2 <- srie %>% CreateTableOne(vars = myVars,
                                 test = T)
 
 
+
 tab2_word <- print(tab2,
                    nonnormal = skewed,
                    quote = F,
                    noSpaces = T,
                    smd = F,
-                   missing = F,
-                   # test = T, # adds P-value
+                   missing = T,
+                   test = F, # adds P-value
                    contDigits = 1,
+                   showAllLevels = T,
                    printToggle = F,
                    dropEqual = T,
                    explain = F)
+
+
 
 
 
@@ -428,5 +438,6 @@ location_tab_2 <- str_c(directory, subdir2, file)
 save_as_docx(flextable_2, path = location_tab_2,
              pr_section = prop_section(page_size = page_size(orient = "landscape"), type = "continuous"))
 
+str(srie[c("Duke criteria", "Vegetation size (mm)")])
 
 
