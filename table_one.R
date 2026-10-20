@@ -19,14 +19,14 @@ endocarditis_joined_total <- endocarditis_joined_total %>% filter(year_of_diagno
 endocarditis_joined_total <- endocarditis_joined_total %>%
   mutate(
   time_ep = factor(case_when(
-        year_of_diagnosis < 2007 ~ "1997-2006",
-        year_of_diagnosis >= 2007 & year_of_diagnosis < 2015 ~ "2007-2014",
-        year_of_diagnosis >= 2015 & year_of_diagnosis < 2024 ~ "2015-2023",
+        year_of_diagnosis < 2006 ~ "1997-2005",
+        year_of_diagnosis >= 2006 & year_of_diagnosis < 2015 ~ "2006-2015",
+        year_of_diagnosis >= 2016 & year_of_diagnosis < 2024 ~ "2016-2023",
         TRUE ~ NA_character_),
       levels = c(
-        "1997-2006",
-        "2007-2014",
-        "2015-2023"),
+        "1997-2005",
+        "2006-2015",
+        "2016-2023"),
       ordered = TRUE),
   age_group = case_when(
     age_at_diagnosis < 60 ~ "<60",

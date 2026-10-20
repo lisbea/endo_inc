@@ -206,3 +206,27 @@ yearly_cases %>%
 # overall_change_pct <-
 #   (last_year$incidence / first_year$incidence - 1) * 100
 
+### INCIDENCE RATE RATIOS per AGE GROUP
+library(broom)
+
+age_IRRs <-
+  age_trends %>%
+  group_split(age_group) %>%
+  lapply(function(dat){
+
+    model <- glm(
+      cases ~ year,
+      offset = log(population),
+      family = quasipoisson(),
+      data = dat
+    )
+
+    tibble(
+      age_group = unique(dat$age_group),
+      IRR = exp(coef(model)["year"]),
+      lower = exp(confint.default(model)["year",1]),
+      upper = exp(confint.default(model)["year",2])
+    )
+  }) %>%
+  bind_rows()
+

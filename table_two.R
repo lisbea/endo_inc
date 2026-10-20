@@ -19,19 +19,16 @@ srie <- endocarditis_joined_total %>% filter(endoreg == 1)
 
 bioavr_flextab_defaults()
 
-#### OBS!!! Still need to categorize valve vegetation size to >10 and <10 mm properly - right nos some seem to not be captured!!!
-
-
 
 srie <- srie %>%
   mutate(
     time_ep = factor(case_when(
-      year_of_diagnosis >= 2007 & year_of_diagnosis < 2015 ~ "2007-2014",
-      year_of_diagnosis >= 2015 & year_of_diagnosis < 2024 ~ "2015-2023",
+      year_of_diagnosis >= 2007 & year_of_diagnosis < 2016 ~ "2007-2015",
+      year_of_diagnosis >= 2016 & year_of_diagnosis < 2024 ~ "2016-2023",
       TRUE ~ NA_character_),
       levels = c(
-        "2007-2014",
-        "2015-2023"),
+        "2007-2015",
+        "2016-2023"),
       ordered = TRUE),
     age_group = case_when(
       age_at_diagnosis < 60 ~ "<60",
@@ -39,8 +36,12 @@ srie <- srie %>%
       age_at_diagnosis >= 70 & age_at_diagnosis < 80 ~ "70-79",
       age_at_diagnosis >= 80 ~ "80+"),
     protesendokardit = factor(case_when(
-      protesendokardit == 0 ~ "Native valve endocarditis",
-      protesendokardit == 1 ~ "Prosthetic valve endocarditis")),
+      protesendokardit == 1 ~ "Prosthetic valve endocarditis",
+      protesendokardit == 0 ~ "Native valve endocarditis")),
+    bicuspid_valve = factor(case_when(
+      bicuspid_aortic_valve_endoreg == 1 ~ "Bicuspid aortic valve",
+      bicuspid_aortic_valve_endoreg == 0 ~ "Tricuspid aortic valve",
+      TRUE ~ NA_character_)),
     op_endocarditis = factor(
       op_endocarditis,
       levels = c(0, 1),
@@ -56,9 +57,9 @@ srie <- srie %>%
       "Culture_neg" = "Culture Negative",
       "multiorganism" = "Polymicrobial",
       "Gram_neg" = "Gram negative bacteria",
-      "No_pathogen_found" = "No pathogen found",
       "Fungi" = "Fungi",
-      "Other" = "Other"
+      "Other" = "Other",
+      "No_pathogen_found" = "No pathogen found"
     ),
     bacteria_groups = factor(
       bacteria_groups,
@@ -71,10 +72,10 @@ srie <- srie %>%
         "HACEK",
         "Polymicrobial",
         "Gram negative bacteria",
-        "No pathogen found",
         "Fungi",
         "Other",
-        "Culture Negative"
+        "Culture Negative",
+        "No pathogen found"
       )),
     infection_site = factor(case_when(
       # Only CIED
@@ -141,6 +142,7 @@ table(srie$vegetation, srie$vegetation_size_mm, useNA = "always")
 table(endocarditis_joined_total$congenital_endoreg_pre, endocarditis_joined_total$CHD_preop, useNA = "always")
 table(srie$time_ep, useNA = "always")
 table(srie$protesendokardit, useNA = "always")
+table(srie$bicuspid_valve, useNA = "always")
 
 # clipr::write_clip(names(srie))
 # dput(names(srie))
@@ -176,8 +178,8 @@ variables <-     c("lpnr",
                     # "age_endoreg",
                     # "sex_endoreg",
                     # "dentist",
-                    # "TTE",
-                    # "TEE",
+                    "TTE",
+                    "TEE",
                     # "murmur_new",
                     # "valve_disease_endoreg_pre",
                     # "bacteria_complete",
@@ -188,7 +190,7 @@ variables <-     c("lpnr",
                     "abscess",
                     "emboli",
                     # "fever",
-                    # "bicuspid_aortic_valve_endoreg",
+                    "bicuspid_valve",
                     # "congenital_endoreg_pre",
                     "duke_criteria",
                     # "op_valve_infectionsite",
@@ -357,6 +359,9 @@ srie <- srie %>%  rename(
                     `Age, years (median [IQR])`  = "age_at_diagnosis",
                     `Education`                  = "EDU",
                     `Female`                     = "sex",
+                    `Transthoracic echocardiogram`   = "TTE",
+                    `Transesophageal echocardiogram` = "TEE",
+                    `Bicuspid aortic valve`          = "bicuspid_valve",
                     # `Non-Nordic birth region`    = "birthregion",
                     `Drug user`                  = "drug_use_pre",
                     # `Surgery`                    = "op_endocarditis",
@@ -374,9 +379,11 @@ myVars <-                     c("Age, years (median [IQR])",
                                 "Age group",
                                 "Female",
                                 "Education",
+                                "Duke criteria",
                                 # "Non-Nordic birth region",
                                 # "Length of stay (days)",
                                 "Congenital heart disease",
+                                "Bicuspid aortic valve",
                                 "Drug user",
                                 "Prosthetic valve endocarditis",
                                 "Bacteria",
@@ -386,7 +393,8 @@ myVars <-                     c("Age, years (median [IQR])",
                                 "Valve vegetation",
                                 "Vegetation size (mm)",
                                 "Embolic events",
-                                "Duke criteria")
+                                "Transesophageal echocardiogram",
+                                "Transthoracic echocardiogram")
 
 catVars <- srie %>% select(-`Time-period`, -`Age, years (median [IQR])`) %>% names()
 skewed <- c("Age, years (median [IQR])")
@@ -417,11 +425,11 @@ tab2_word <- print(tab2,
 
 
 
-tab2_df <- as_tibble(tab2_word, rownames = "Variable") %>% select(-test)
+tab2_df <- as_tibble(tab2_word, rownames = "Variable")
 
 tab2_df$Variable[1] <- "No."
 
-header <- str_squish(str_remove("Table 2. Baseline characteristics in 7,080 patients registered in the Swedish Registry of Infective Endocarditis, classified by time-period", "\n"))
+header <- str_squish(str_remove("Table 2. Baseline characteristics, microorganisms, and IE complications in 7,077 patients registered in the Swedish Registry of Infective Endocarditis, classified by time-period", "\n"))
 
 # Check order here according to order of variables in table 1
 footer <- str_squish(str_remove("Numbers are No. (%) unless otherwise noted. IQR = interquartile range; Q = quartile. HACEK = Haemophilus, Aggregatibacter, Cardiobacterium, Eikenella and Kingella. *Vegetation size was available for 2,987 patients with documented vegetation.","\n"))

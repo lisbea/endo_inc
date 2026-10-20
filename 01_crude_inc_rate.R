@@ -122,68 +122,68 @@ incidence_year <- ie_inc_df  %>%
     .groups = "drop"
   )
 
-# Testing first to use a traditional Poisson model to fit the data
-trend_model <- glm(cases ~ year, offset = log(population), family = poisson(), data = incidence_year)
-
-# Predictions and 95% CIs on the log scale
-pred <- predict(
-  trend_model,
-  newdata = incidence_year,
-  type = "link",
-  se.fit = TRUE
-)
-
-incidence_year <- incidence_year %>%
-  mutate(
-    fit = exp(pred$fit) / population * 100000,
-    fit_lower = exp(pred$fit - 1.96 * pred$se.fit) /
-      population * 100000,
-    fit_upper = exp(pred$fit + 1.96 * pred$se.fit) /
-      population * 100000
-  )
-
-### Plotting the data
-inc_fig_simple <- ggplot(incidence_year, aes(x = year, y = incidence)) +
-  geom_point(color = "#1F4E79", size = 2) +
-
-  scale_y_continuous(
-    name = "Incidence per 100,000 person-years",
-    limits = c(0, NA),
-    breaks = seq(0, 15, by = 3),
-    expand = expansion(mult = c(0, 0.05))
-  ) +
-  scale_x_continuous(
-    name = "Year",
-    breaks = seq(min(incidence_year$year), max(incidence_year$year), by = 2)
-  ) +
-
-# Fitted trend (Poisson, linear trend)
-  geom_line(aes(y = fit),
-          colour = "red",
-          linewidth = 1) +
-
-# Confidence band around trend
-  geom_ribbon(
-    aes(ymin = fit_lower,
-        ymax = fit_upper),
-    fill = "red",
-    alpha = 0.2
-  ) +
-
-  theme_classic(base_size = 16) +
-  theme(
-    plot.title = element_text(
-      face = "bold",
-      size = 16,
-      hjust = 0.5
-    ),
-    axis.title = element_text(size = 14),
-    axis.text = element_text(size = 12),
-    axis.line = element_line(color = "black"),
-    axis.ticks = element_line(color = "black")
-  )
-
-inc_fig_simple
+# # Testing first to use a traditional Poisson model to fit the data
+# trend_model <- glm(cases ~ year, offset = log(population), family = poisson(), data = incidence_year)
+#
+# # Predictions and 95% CIs on the log scale
+# pred <- predict(
+#   trend_model,
+#   newdata = incidence_year,
+#   type = "link",
+#   se.fit = TRUE
+# )
+#
+# incidence_year <- incidence_year %>%
+#   mutate(
+#     fit = exp(pred$fit) / population * 100000,
+#     fit_lower = exp(pred$fit - 1.96 * pred$se.fit) /
+#       population * 100000,
+#     fit_upper = exp(pred$fit + 1.96 * pred$se.fit) /
+#       population * 100000
+#   )
+#
+# ### Plotting the data
+# inc_fig_simple <- ggplot(incidence_year, aes(x = year, y = incidence)) +
+#   geom_point(color = "#1F4E79", size = 2) +
+#
+#   scale_y_continuous(
+#     name = "Incidence per 100,000 person-years",
+#     limits = c(0, NA),
+#     breaks = seq(0, 15, by = 3),
+#     expand = expansion(mult = c(0, 0.05))
+#   ) +
+#   scale_x_continuous(
+#     name = "Year",
+#     breaks = seq(min(incidence_year$year), max(incidence_year$year), by = 2)
+#   ) +
+#
+# # Fitted trend (Poisson, linear trend)
+#   geom_line(aes(y = fit),
+#           colour = "red",
+#           linewidth = 1) +
+#
+# # Confidence band around trend
+#   geom_ribbon(
+#     aes(ymin = fit_lower,
+#         ymax = fit_upper),
+#     fill = "red",
+#     alpha = 0.2
+#   ) +
+#
+#   theme_classic(base_size = 16) +
+#   theme(
+#     plot.title = element_text(
+#       face = "bold",
+#       size = 16,
+#       hjust = 0.5
+#     ),
+#     axis.title = element_text(size = 14),
+#     axis.text = element_text(size = 12),
+#     axis.line = element_line(color = "black"),
+#     axis.ticks = element_line(color = "black")
+#   )
+#
+# inc_fig_simple
 
 # Checking for overdispersion, which indicates that there is overdispersion, ratio = 3.186954.
 # Therefore Poisson model to fit linear trend is not the best method
@@ -300,4 +300,55 @@ last_year <- incidence_year %>%
 overall_change_pct <-
   (last_year$incidence / first_year$incidence - 1) * 100
 
+### Joinpoint regression
 
+library(segmented)
+
+# testing for year that there is change in slope (one slope change here). The answer is 2016.7
+davies.test(
+  m1,
+  seg.Z = ~ year
+)
+
+m_seg <- segmented(
+  m1,
+  seg.Z = ~ year,
+  psi = list(year = 2017)
+)
+
+summary(m_seg)
+m_seg$psi
+confint(m_seg)
+slope(m_seg)
+exp(slope(m_seg)$year[, 1])
+
+# testing for more than one change in slope
+m_seg2 <- segmented(
+  m1,
+  seg.Z = ~ year,
+  npsi = 2
+)
+
+summary(m_seg2)
+slope(m_seg2)
+
+#Calculating annual percentage increase in the different time segments
+slopes <- slope(m_seg2)$year[, "Est."]
+
+APC <- (exp(slopes) - 1) * 100
+APC
+
+#Calculating slope estimates and 95% CI
+s <- slope(m_seg2)$year
+
+apc_tbl <- data.frame(
+  beta = s[, "Est."],
+  se = s[, "St.Err."]
+) %>%
+  mutate(
+    APC = (exp(beta) - 1) * 100,
+    APC_low = (exp(beta - 1.96 * se) - 1) * 100,
+    APC_high = (exp(beta + 1.96 * se) - 1) * 100
+  )
+
+apc_tbl
