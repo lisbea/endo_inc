@@ -20,10 +20,10 @@ load(str_c(directory, subdir, "ie_inc_df.RData"))
 ie_inc_df <- ie_inc_df %>%
   mutate(
     age_group = case_when(
-      age < 60 ~ "<60",
+      age < 60 ~ "≤59",
       age >= 60 & age < 70 ~ "60-69",
       age >= 70 & age < 80 ~ "70-79",
-      age >= 80 ~ "80+",
+      age >= 80 ~ "≥80",
     )
   )
 
@@ -56,43 +56,43 @@ trend_model <- glm(
 
 # Predictions and 95% CIs on the log scale
 ### Linear quasipoisson model
-pred_linear <- predict(
-  trend_model,
-  newdata = age_trends,
-  type = "link",
-  se.fit = TRUE
-)
+# pred_linear <- predict(
+#   trend_model,
+#   newdata = age_trends,
+#   type = "link",
+#   se.fit = TRUE
+# )
+#
+# age_linear_trends <- age_trends %>%
+#   mutate(
+#     fit = exp(pred_linear$fit) / population * 100000,
+#     fit_lower = exp(pred_linear$fit - 1.96 * pred_lineard$se.fit) /
+#       population * 100000,
+#     fit_upper = exp(pred_linear$fit + 1.96 * pred_linear$se.fit) /
+#       population * 100000
+#   )
 
-age_linear_trends <- age_trends %>%
-  mutate(
-    fit = exp(pred_linear$fit) / population * 100000,
-    fit_lower = exp(pred_linear$fit - 1.96 * pred_lineard$se.fit) /
-      population * 100000,
-    fit_upper = exp(pred_linear$fit + 1.96 * pred_linear$se.fit) /
-      population * 100000
-  )
-
-# Testing spline vs linear model for fit
-m_linear <- glm(
-  cases ~ year + age_group,
-  offset = log(population),
-  family = quasipoisson(),
-  data = age_trends
-)
-
+# # Testing spline vs linear model for fit
+# m_linear <- glm(
+#   cases ~ year + age_group,
+#   offset = log(population),
+#   family = quasipoisson(),
+#   data = age_trends
+# )
+#
 m_spline <- glm(
   cases ~ splines::ns(year, df = 3) * age_group,
   offset = log(population),
   family = quasipoisson(),
   data = age_trends
 )
-
-m_no_interaction <- glm(
-  cases ~ splines::ns(year, df = 3) + age_group,
-  offset = log(population),
-  family = quasipoisson(),
-  data = age_trends
-)
+#
+# m_no_interaction <- glm(
+#   cases ~ splines::ns(year, df = 3) + age_group,
+#   offset = log(population),
+#   family = quasipoisson(),
+#   data = age_trends
+# )
 
 
 anova(m_no_interaction, m_spline, test = "F") ### Testing whether the incidence trends differ between the age groups, which gives a v. small P-value indicating the trends differ per age group
@@ -120,10 +120,10 @@ plot_df <- age_trends %>%
 
 
 age_cols <- c(
-  "<60" = "#EFCB68", # KI gold
+  "≤59" = "#EFCB68", # KI gold
   "60-69"= "#4C979F", # KI turquoise
   "70-79"= "#4575B4", # KI blue
-  "80+" = "#B24C63" # KI burgundy
+  "≥80" = "#B24C63" # KI burgundy
 )
 
 # Plotting incidence by 100,000 inhabitants by age groups
@@ -195,16 +195,16 @@ yearly_cases %>%
   )
 
 ### Overall change during the study period, by age group
-# ie_inc_df_80 <- ie_inc_df %>% filter(age_group == "80+")
-#
-# first_year <- ie_inc_df_80 %>%
-#   filter(year == min(year))
-#
-# last_year <- ie_inc_df_80 %>%
-#   filter(year == max(year))
-#
-# overall_change_pct <-
-#   (last_year$incidence / first_year$incidence - 1) * 100
+ie_inc_df_80 <- ie_inc_df %>% filter(age_group == "≥80")
+
+first_year <- ie_inc_df_80 %>%
+  filter(year == min(year))
+
+last_year <- ie_inc_df_80 %>%
+  filter(year == max(year))
+
+overall_change_pct <-
+  (last_year$incidence / first_year$incidence - 1) * 100
 
 ### INCIDENCE RATE RATIOS per AGE GROUP
 library(broom)

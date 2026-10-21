@@ -17,7 +17,7 @@ subdir1 <- "/Data/RData/"
 # load(str_c(directory, subdir_rdata, file)) Use if/when weights are needed
 load(str_c(directory, subdir1, "endocarditis_joined_total.RData"))
 
-endocarditis_joined_total <- endocarditis_joined_total %>% filter(year >= 1997, year <= 2023)
+endocarditis_joined_total <- endocarditis_joined_total %>% filter(year_of_diagnosis >= 1997 & year_of_diagnosis <= 2023)
 
 
 endocarditis_joined_total %>%
@@ -38,14 +38,14 @@ endocarditis_joined_total %>%
 endocarditis_joined_total <- endocarditis_joined_total %>%
   mutate(
     age_group = case_when(
-      age_at_diagnosis < 60 ~ "<60",
+      age_at_diagnosis < 60 ~ "≤59",
       age_at_diagnosis >= 60 & age_at_diagnosis < 70 ~ "60-69",
       age_at_diagnosis >= 70 & age_at_diagnosis < 80 ~ "70-79",
-      age_at_diagnosis >= 80 ~ "80+"
+      age_at_diagnosis >= 80 ~ "≥80"
     ),
     age_group = factor(
       age_group,
-      levels = c("<60", "60-69", "70-79", "80+")
+      levels = c("≤59", "60-69", "70-79", "≥80")
     )
   )
 

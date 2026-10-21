@@ -322,7 +322,7 @@ confint(m_seg)
 slope(m_seg)
 exp(slope(m_seg)$year[, 1])
 
-# testing for more than one change in slope
+# testing for more than one change in slope and here we identify TWO breakpoints, at 2008 and 2016
 m_seg2 <- segmented(
   m1,
   seg.Z = ~ year,
