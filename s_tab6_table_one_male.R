@@ -15,21 +15,31 @@ subdir<- "/Data/RData/"
 load(str_c(directory, subdir, "endocarditis_joined_total.RData"))
 
 endocarditis_joined_total <- endocarditis_joined_total %>% filter(year_of_diagnosis >= 1997, year_of_diagnosis <= 2023)
-endocarditis_joined_total <- endocarditis_joined_total %>% filter(age_at_diagnosis >= 80)
+endocarditis_joined_total <- endocarditis_joined_total %>% filter(sex == 0)
 
 
 endocarditis_joined_total <- endocarditis_joined_total %>%
   mutate(
     time_ep = factor(case_when(
-      year_of_diagnosis < 2007 ~ "1997-2007",
-      year_of_diagnosis >= 2008 & year_of_diagnosis < 2015 ~ "2008-2015",
-      year_of_diagnosis >= 2016 & year_of_diagnosis < 2024 ~ "2016-2023",
+      year_of_diagnosis < 2006 ~ "1997-2005",
+      year_of_diagnosis >= 2006 & year_of_diagnosis < 2015 ~ "2006-2014",
+      year_of_diagnosis >= 2015 & year_of_diagnosis < 2024 ~ "2015-2023",
       TRUE ~ NA_character_),
       levels = c(
-        "1997-2007",
-        "2008-2015",
-        "2016-2023"),
+        "1997-2005",
+        "2006-2014",
+        "2015-2023"),
       ordered = TRUE),
+    age_group = factor(case_when(
+      age_at_diagnosis < 60 ~ "≤59",
+      age_at_diagnosis >= 60 & age_at_diagnosis < 70 ~ "60-69",
+      age_at_diagnosis >= 70 & age_at_diagnosis < 80 ~ "70-79",
+      age_at_diagnosis >= 80 ~ "≥80",
+      TRUE ~ NA_character_),
+      levels = c("≤59",
+                 "60-69",
+                 "70-79",
+                 "≥80")),
     protesendokardit = factor(case_when(
       protesendokardit == 0 ~ "Native valve endocarditis",
       protesendokardit == 1 ~ "Prosthetic valve endocarditis")),
@@ -62,7 +72,7 @@ endocarditis_joined_total <- endocarditis_joined_total %>%
                  "CIED only")))
 
 
-table(endocarditis_joined_total$infection_site, useNA = "always")
+table(endocarditis_joined_total$infection_site, useNA = "always") #available for 6146 patients
 table(endocarditis_joined_total$final_infectionsite, useNA = "always")
 
 left_unclassified <- endocarditis_joined_total %>%
@@ -301,7 +311,7 @@ variables <-            c("lpnr",
                           # "severe_caries",
                           # "poor_oral_health",
                           "time_ep",
-                          # "age_group",
+                          "age_group",
                           "infection_site")
 
 endocarditis_joined_total <- endocarditis_joined_total %>% select(all_of(variables)) %>% select(-"lpnr")
@@ -309,6 +319,7 @@ endocarditis_joined_total <- endocarditis_joined_total %>% select(all_of(variabl
 # renaming variables for table. if there are spaces, back ticks need to be used.
 endocarditis_joined_total <- endocarditis_joined_total %>%  rename(
   `Age, years (median [IQR])` = age_at_diagnosis,
+  `Age group` = age_group,
   `Female sex` = sex,
   `Time episode` = time_ep,
   `Drug user` = drug_use_pre,
@@ -350,7 +361,7 @@ endocarditis_joined_total <- endocarditis_joined_total %>%  rename(
 table(endocarditis_joined_total$"Prosthetic valve endocarditis")
 
 myVars <-   c( "Age, years (median [IQR])",
-               "Female sex",
+               "Age group",
                "Married",
                "Household income",
                "Length of stay",
@@ -413,7 +424,7 @@ tab1_df <- as_tibble(tab1_word, rownames = "Variable")
 tab1_df$Variable[1] <- "No."
 
 
-header <- str_squish(str_remove("sTable 4. Baseline characteristics in 5,962 patients aged ≥80, stratified by time-period", "\n"))
+header <- str_squish(str_remove("sTable 6. Baseline characteristics in 13,543 male patients, stratified by time-period", "\n"))
 
 # Check order here according to order of variables in table 1
 footer <- str_squish(str_remove("Numbers are No. (%) unless otherwise noted. IQR = interquartile range; Q = quartile;
@@ -421,11 +432,11 @@ footer <- str_squish(str_remove("Numbers are No. (%) unless otherwise noted. IQR
 
 
 flextable_1 <- bioavr_tab(tab1_df, header, footer)
-
+flextable_1
 
 #### Save as docx
 subdir2 <- "/Studier/Incidence_of_IE/Tab/"
-file <- "s_tab4_baseline_age.docx"
+file <- "s_tab6_baseline_males.docx"
 location_tab_1 <- str_c(directory, subdir2, file)
 
 save_as_docx(flextable_1, path = location_tab_1,

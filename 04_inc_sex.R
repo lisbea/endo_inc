@@ -61,6 +61,17 @@ incidence_sex_yr <- ie_inc_df %>%
 # # anova test gives non-significant p-value (P = appr. 0.64), therefore linear model is just as good as splline model.
 # anova(m1, m_spline, test = "F")
 
+# Testing for interaction year'sex
+m_int <- glm(
+  cases ~ year * sex,
+  offset = log(population),
+  family = quasipoisson,
+  data = incidence_sex_yr
+)
+
+summary(m_int)
+coef(summary(m_int))
+
 ### Fitting linear quasi-Poisson model
 
 m_sex <- glm(
@@ -180,3 +191,4 @@ subdir3 <- "/Studier/Incidence_of_IE/Fig/"
 pdf(str_c(directory, subdir3, "sex_irr_fig.pdf"), width = 15, height = 10, onefile = F)
 sex_irr_fig
 dev.off()
+

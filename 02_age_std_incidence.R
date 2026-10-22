@@ -14,7 +14,7 @@ directory <- system("find ~ -name \"*- ENDO_CARE*\" -type d -depth 5 -maxdepth 5
 subdir<- "/Studier/Incidence_of_IE/Data/RData/"
 
 # load(str_c(directory, subdir_rdata, file)) Use if/when weights are needed
-load(str_c(directory, subdir1, "ie_inc_df.RData"))
+load(str_c(directory, subdir, "ie_inc_df.RData"))
 
 # Creating age- and sex-standardized incidence rates, ESP2013-compatible)
 
@@ -90,7 +90,7 @@ ggplot(incidence_eur_std, aes(x = year, y = std_incidence)) +
   ) +
   scale_x_continuous(
     name = "Year",
-    breaks = seq(min(incidence_year$year), max(incidence_year$year), by = 2)
+    breaks = seq(min(incidence_eur_std$year), max(incidence_eur_std$year), by = 2)
   ) +
 
   theme_classic(base_size = 14) +
@@ -136,7 +136,7 @@ ggplot(incidence_swe_std, aes(x = year, y = std_incidence)) +
   ) +
   scale_x_continuous(
     name = "Year",
-    breaks = seq(min(incidence_year$year), max(incidence_year$year), by = 2)
+    breaks = seq(min(incidence_swe_std$year), max(incidence_swe_std$year), by = 2)
   ) +
 
   theme_classic(base_size = 14) +

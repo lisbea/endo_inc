@@ -18,21 +18,26 @@ endocarditis_joined_total <- endocarditis_joined_total %>% filter(year_of_diagno
 
 endocarditis_joined_total <- endocarditis_joined_total %>%
   mutate(
-  time_ep = factor(case_when(
-        year_of_diagnosis < 2007 ~ "1997-2007",
-        year_of_diagnosis >= 2008 & year_of_diagnosis < 2015 ~ "2008-2015",
-        year_of_diagnosis >= 2016 & year_of_diagnosis < 2024 ~ "2016-2023",
-        TRUE ~ NA_character_),
+    time_ep = factor(case_when(
+      year_of_diagnosis < 2006 ~ "1997-2005",
+      year_of_diagnosis >= 2006 & year_of_diagnosis < 2015 ~ "2006-2014",
+      year_of_diagnosis >= 2015 & year_of_diagnosis < 2024 ~ "2015-2023",
+      TRUE ~ NA_character_),
       levels = c(
-        "1997-2007",
-        "2008-2015",
-        "2016-2023"),
+        "1997-2005",
+        "2006-2014",
+        "2015-2023"),
       ordered = TRUE),
-  age_group = case_when(
+  age_group = factor(case_when(
     age_at_diagnosis < 60 ~ "≤59",
     age_at_diagnosis >= 60 & age_at_diagnosis < 70 ~ "60-69",
     age_at_diagnosis >= 70 & age_at_diagnosis < 80 ~ "70-79",
-    age_at_diagnosis >= 80 ~ "≥80"),
+    age_at_diagnosis >= 80 ~ "≥80",
+    TRUE ~ NA_character_),
+  levels = c("≤59",
+             "60-69",
+             "70-79",
+             "≥80")),
   protesendokardit = factor(case_when(
     protesendokardit == 0 ~ "Native valve endocarditis",
     protesendokardit == 1 ~ "Prosthetic valve endocarditis")),

@@ -53,13 +53,13 @@ endocarditis_joined_total <- endocarditis_joined_total %>%
   mutate(
   time_ep = factor(case_when(
         year_of_diagnosis < 2006 ~ "1997-2005",
-        year_of_diagnosis >= 2006 & year_of_diagnosis < 2016 ~ "2006-2015",
-        year_of_diagnosis >= 2016 & year_of_diagnosis < 2024 ~ "2016-2023",
+        year_of_diagnosis >= 2006 & year_of_diagnosis < 2015 ~ "2006-2014",
+        year_of_diagnosis >= 2015 & year_of_diagnosis < 2024 ~ "2015-2023",
         TRUE ~ NA_character_),
       levels = c(
         "1997-2005",
-        "2006-2015",
-        "2016-2023"),
+        "2006-2014",
+        "2015-2023"),
       ordered = TRUE))
 
 ```
@@ -231,6 +231,38 @@ inc_age_first_last
   
 
 ```
+
+# Percentage change first to last year by SEX
+```{r}
+
+
+ie_inc_sex <- ie_inc_df %>%
+  group_by(year, sex) %>%
+  summarise(
+    cases = sum(cases),
+    population = sum(population),
+    incidence = cases / population * 100000,
+    .groups = "drop"
+  ) %>%
+  arrange(desc(cases))
+
+inc_sex_first_last <- ie_inc_sex %>%
+arrange(sex, year) %>%
+group_by(sex) %>%
+summarise(
+first_year = first(year),
+last_year = last(year),
+incidence_first = first(incidence),
+incidence_last = last(incidence),
+pct_change = 100 * (incidence_last - incidence_first) / incidence_first
+)
+
+inc_sex_first_last
+  
+
+```
+
+
 
 # Percentage change first to last year and 2010 to last year, in proportion of PVE
 ```{r}
